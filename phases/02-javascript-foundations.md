@@ -16,6 +16,7 @@ Learn the JavaScript you'll *actually see* in our project, and why we write it a
 > bun playground/02-loops.js
 > bun playground/03-async.js
 > bun playground/04-types.ts
+> bun playground/06-array-methods.js   # map / filter / reduce, on our app's data
 > ```
 > Or paste snippets into `bun repl`, `node`, or the browser console (`F12` → Console).
 
@@ -408,8 +409,13 @@ const modelId = MODELS.some((m) => m.id === model) ? model : DEFAULT_MODEL;
 ```
 
 ## 🧪 Try it yourself
+Open `playground/06-array-methods.js` — the exercises are at the bottom of the file.
+
 1. Given `const chats = [{title:"a", n:2}, {title:"b", n:0}, {title:"c", n:5}]`, use `filter` + `map` to get the titles of chats with `n > 0`.
-2. Write an `async` function that fetches `https://api.github.com/users/<your-username>` and logs your number of public repos. Break the URL on purpose and handle the error with `try/catch`.
+2. Count the pinned chats two ways: with `filter(...).length`, and with `reduce`.
+3. Find the chat with the most messages. (Hint: `reduce`, comparing as you go.)
+4. Rewrite `nums.map((n) => n * 2)` as a plain `for` loop. Which reads better?
+5. Write an `async` function that fetches `https://api.github.com/users/<your-username>` and logs your number of public repos. Break the URL on purpose and handle the error with `try/catch`.
 
 ## 🤖 Ask your agent
 - "Explain the event loop to me like I'm 10. Why doesn't `await` freeze the whole page?"
