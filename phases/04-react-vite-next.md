@@ -470,7 +470,25 @@ export default function Home() {
 }
 ```
 
-### Step 5: Save your work
+### Step 5: The hooks playground (highly recommended)
+The `phase-04-nextjs` branch includes `app/hooks-demo/page.tsx`, an interactive page covering everything above. Copy it into your project, or switch to the branch:
+
+```bash
+git switch phase-04-nextjs      # then: bun install && bun dev
+```
+Open **http://localhost:3000/hooks-demo**. It has five live sections:
+
+| Section | Try this |
+|---|---|
+| **1. useState** | Compare the `+2 (function form)` and `+2 (buggy)` buttons. Only one adds 2 — that's the stale-value trap |
+| **2. Controlled input** | Type and watch the counter. Press Enter to send, Shift+Enter for a newline (exactly how the real chat box behaves) |
+| **3. map / filter / reduce** | Tick the checkbox to filter the list, delete items, and watch the reduce total update |
+| **4. useEffect** | Start the timer, then watch your **browser tab title** change. Pause it and the cleanup runs |
+| **5. useRef** | Focus the input from code, and see the render count survive re-renders without causing them |
+
+> 🧪 **Best exercise of the whole course:** open that file and break things. Remove `onChange` from the textarea and try to type. Delete the `return () => clearInterval(timer)` cleanup, start/pause a few times, and watch the timer speed up as leaked intervals stack.
+
+### Step 6: Save your work
 ```bash
 git add . && git commit -m "Next.js + shadcn setup"
 ```
@@ -478,14 +496,24 @@ git add . && git commit -m "Next.js + shadcn setup"
 ## ✅ Checkpoint
 - `bun dev` runs, and http://localhost:3000 shows your heading and a working shadcn button.
 - `components/ui/` has the 12 components.
+- You can explain when a file needs `"use client"` and when it must not have it.
+- On `/hooks-demo`: the counter increments, the textarea types, and the timer's tab title updates.
 
 ## 🧪 Try it yourself
 1. Remove `"use client"` from `page.tsx` and read the error. Why does `useState` need a client component?
 2. Create `app/about/page.tsx` that returns `<h1>About</h1>` and open `/about`. That's file-based routing.
+3. In the hooks demo, replace `setChats(chats.filter(...))` with `chats.splice(...)`. The item won't disappear — explain why.
+4. Add a "pin" button to section 3 that toggles a chat's `pinned` field. You'll need `map` to change one item while keeping the rest:
+   ```tsx
+   setChats(chats.map((c) => (c.id === id ? { ...c, pinned: !c.pinned } : c)));
+   ```
+5. Change the `useEffect` dependency array in section 4 to `[]` and start the timer. What breaks, and why?
 
 ## 🤖 Ask your agent
 - "Explain hydration with a diagram. What is a hydration mismatch error?"
 - "In this project, which components are Server Components and which are Client Components, and why?"
 - "When would I choose Vite + React instead of Next.js?"
+- "Walk me through `app/hooks-demo/page.tsx` section by section."
+- "Why does mutating state not re-render in React? Explain reference equality."
 
 ➡️ Next: [Phase 05: Databases](05-database.md)
