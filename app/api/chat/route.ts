@@ -3,11 +3,14 @@ import {
   createUIMessageStreamResponse,
   streamText,
   toUIMessageStream,
+  isStepCount,
+  tool,
   type UIMessage,
 } from "ai";
 import { openrouter } from "@openrouter/ai-sdk-provider";
 import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
+import { z } from "zod";
 import { DEFAULT_MODEL, MODELS } from "@/lib/models";
 
 // Allow streaming responses up to 60 seconds
@@ -57,6 +60,19 @@ export async function POST(req: Request) {
     model: openrouter(modelId),
     instructions: "You are a helpful assistant.",
     messages: await convertToModelMessages(messages),
+    tools: {
+      getTime: tool({
+        description: "Get the current date and time in a timezone",
+        inputSchema: z.object({
+          timezone: z.string().describe("IANA timezone, e.g. Asia/Kolkata"),
+        }),
+        execute: async ({ timezone }) => ({
+          time: new Date().toLocaleString("en-IN", { timeZone: timezone }),
+        }),
+      }),
+    },
+    // Let the model call a tool, read the result, then answer (up to 5 steps)
+    stopWhen: isStepCount(5),
   });
 
   // 6. Stream the answer back, and save it to the database when it's done
