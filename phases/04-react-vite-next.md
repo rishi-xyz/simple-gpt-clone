@@ -76,28 +76,26 @@ export function Counter() {
 const [value, setValue] = useState(initialValue);
 //     ↑        ↑                      ↑
 //   current  function to           starting value
-//   value    change it             (only used on first render)
+//   value    change it             (only used on the first render)
 ```
 
 Why not a plain variable? Because **a normal variable doesn't survive a re-render, and changing it doesn't tell React to update the screen**:
 
 ```tsx
 let count = 0;                          // ❌ resets every render, no re-render triggered
-count++;                                //    screen never changes
+count++;                                //    the screen never changes
 
 const [count, setCount] = useState(0);  // ✅ React remembers it and re-renders on change
 setCount(count + 1);
 ```
 
-**The three rules that cause 90% of `useState` bugs:**
+**The three rules that cause most `useState` bugs:**
 
-**1. Setting state is asynchronous.** The variable doesn't change on the line after you set it:
+**1. Setting state is asynchronous.** The variable doesn't change on the next line:
 ```tsx
-const [count, setCount] = useState(0);
-
 function handleClick() {
   setCount(count + 1);
-  console.log(count);     // still 0! the new value arrives on the NEXT render
+  console.log(count);     // still the old value! the new one arrives on the NEXT render
 }
 ```
 
@@ -110,17 +108,17 @@ setCount((c) => c + 1);
 setCount((c) => c + 1);         // ✅ each gets the latest → +2 total
 ```
 
-**3. Never mutate state — replace it.** React compares the old and new value; if it's the same object, it assumes nothing changed:
+**3. Never mutate state — replace it.** React compares old and new; the same object means "nothing changed":
 ```tsx
-messages.push(newMessage);            // ❌ same array → React sees no change → no re-render
+messages.push(newMessage);              // ❌ same array → no re-render
 setMessages([...messages, newMessage]); // ✅ new array → re-renders
 
-user.name = "Ravi";                   // ❌
-setUser({ ...user, name: "Ravi" });   // ✅
+user.name = "Ravi";                     // ❌
+setUser({ ...user, name: "Ravi" });     // ✅
 ```
-This is why Phase 02 warned about `push` and `sort`. In React, **make a new thing** instead.
+This is why Phase 02 warned about `push` and `sort`. In React, **make a new thing**.
 
-Real examples from our chat screen (`components/chat.tsx`):
+From our chat screen (`components/chat.tsx`):
 ```tsx
 const [input, setInput] = useState("");            // what's typed in the box
 const [model, setModel] = useState(initialModel);  // which AI model is picked
@@ -128,10 +126,10 @@ const [model, setModel] = useState(initialModel);  // which AI model is picked
 
 #### Events: reacting to the user
 
-Event handlers are props starting with `on…`. You pass a **function** (not a call):
+Event handlers are props starting with `on…`. Pass a **function**, don't call it:
 ```tsx
 <button onClick={handleClick}>      {/* ✅ passing the function */}
-<button onClick={handleClick()}>    {/* ❌ calls it immediately on render! */}
+<button onClick={handleClick()}>    {/* ❌ runs immediately on render! */}
 <button onClick={() => remove(id)}> {/* ✅ arrow wrapper when you need arguments */}
 ```
 
@@ -158,9 +156,9 @@ const [input, setInput] = useState("");
      ▲                        │
      └──── onChange ──────────┘     one source of truth
 ```
-Forget `onChange` and the box appears frozen — you type and nothing shows, because `value` is pinned to unchanging state.
+Forget `onChange` and the box looks frozen: you type and nothing appears, because `value` is pinned to state that never changes.
 
-Our real handlers from `components/chat.tsx`:
+The real handlers from `components/chat.tsx`:
 ```tsx
 function handleSubmit(e?: React.FormEvent) {
   e?.preventDefault();                  // stop the browser reloading the page
@@ -177,11 +175,11 @@ function handleKeyDown(e: React.KeyboardEvent<HTMLTextAreaElement>) {
   }
 }
 ```
-> `e.preventDefault()` stops the browser's default behaviour — a form reloading the page, or Enter inserting a newline.
+> `e.preventDefault()` cancels the browser's default behaviour — a form reloading the page, or Enter inserting a newline.
 
 #### `useEffect`: running code after render
 
-`useEffect` is for **side effects**: things outside React's render, like scrolling, timers, subscriptions or manual DOM work.
+`useEffect` is for **side effects**: work outside React's render, like scrolling, timers or subscriptions.
 
 ```tsx
 useEffect(() => {
@@ -189,11 +187,11 @@ useEffect(() => {
 }, [dependencies]);
 ```
 
-The **dependency array** controls when it runs — this is the whole hook:
+The **dependency array** controls when it runs — that's the whole hook:
 
 ```tsx
 useEffect(() => { ... });              // after EVERY render (rarely what you want)
-useEffect(() => { ... }, []);          // once, after the first render only
+useEffect(() => { ... }, []);          // once, after the first render
 useEffect(() => { ... }, [messages]);  // whenever `messages` changes
 ```
 
@@ -206,7 +204,7 @@ useEffect(() => {
 }, [messages]);              // re-run every time a message arrives
 ```
 
-**Cleanup:** return a function to undo the effect. React runs it before the next effect and when the component disappears:
+**Cleanup:** return a function to undo the effect. React runs it before the next effect and when the component unmounts:
 ```tsx
 useEffect(() => {
   const timer = setInterval(tick, 1000);
@@ -214,17 +212,17 @@ useEffect(() => {
 }, []);
 ```
 
-> ⚠️ **Don't reach for `useEffect` by habit.** You do **not** need it to fetch data in Next.js (Server Components do that), or to compute a value from state (just compute it while rendering). Ours uses it for one thing: scrolling, which is genuinely outside React.
+> ⚠️ **Don't reach for `useEffect` by habit.** You don't need it to fetch data in Next.js (Server Components do that), or to compute a value from state (just compute it while rendering). Ours uses it for one thing: scrolling.
 
 #### `useRef`: a box that doesn't re-render
 
 Two uses. Point at a DOM element:
 ```tsx
 const bottomRef = useRef<HTMLDivElement>(null);
-<div ref={bottomRef} />                       // now bottomRef.current is that div
+<div ref={bottomRef} />                       // bottomRef.current is now that div
 bottomRef.current?.scrollIntoView();
 ```
-Or hold a value that changes **without** triggering a re-render (unlike state).
+Or hold a value that changes **without** causing a re-render.
 
 | | `useState` | `useRef` |
 |---|---|---|
@@ -259,9 +257,9 @@ if (isLoggedIn) { /* use it here */ }
 <details>
 <summary><b>▸ Go deeper: why does my effect run twice in development?</b></summary>
 
-In development, Next.js runs React in **Strict Mode**, which deliberately mounts every component twice to surface missing cleanup. It does **not** happen in production.
+In development, React **Strict Mode** deliberately mounts every component twice to surface missing cleanup. It does **not** happen in production.
 
-If running twice breaks something, that's a real bug the check just found — usually a missing cleanup function. Don't disable Strict Mode; add the cleanup.
+If running twice breaks something, that's a real bug the check just found — usually a missing cleanup function. Add the cleanup rather than disabling Strict Mode.
 </details>
 
 ## 💡 2. Vite: the fast dev server & bundler
