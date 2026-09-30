@@ -56,7 +56,8 @@ function Greeting({ name }: { name: string }) {   // props = inputs
 - **Props**: data passed *into* a component from its parent (read-only).
 - JSX uses `className` instead of `class`, and `{ }` for JS expressions.
 
-### State and hooks
+### State and hooks ⭐
+
 **State** is data that changes over time. Changing it **re-renders** the component. **Hooks** are functions starting with `use…` that add features to components.
 
 ```tsx
@@ -69,13 +70,199 @@ export function Counter() {
 }
 ```
 
-| Hook | Used for | In our project |
+#### `useState`: remembering a value
+
+```tsx
+const [value, setValue] = useState(initialValue);
+//     ↑        ↑                      ↑
+//   current  function to           starting value
+//   value    change it             (only used on first render)
+```
+
+Why not a plain variable? Because **a normal variable doesn't survive a re-render, and changing it doesn't tell React to update the screen**:
+
+```tsx
+let count = 0;                          // ❌ resets every render, no re-render triggered
+count++;                                //    screen never changes
+
+const [count, setCount] = useState(0);  // ✅ React remembers it and re-renders on change
+setCount(count + 1);
+```
+
+**The three rules that cause 90% of `useState` bugs:**
+
+**1. Setting state is asynchronous.** The variable doesn't change on the line after you set it:
+```tsx
+const [count, setCount] = useState(0);
+
+function handleClick() {
+  setCount(count + 1);
+  console.log(count);     // still 0! the new value arrives on the NEXT render
+}
+```
+
+**2. Updating based on the previous value needs the function form:**
+```tsx
+setCount(count + 1);
+setCount(count + 1);            // ❌ both read the same old count → +1 total
+
+setCount((c) => c + 1);
+setCount((c) => c + 1);         // ✅ each gets the latest → +2 total
+```
+
+**3. Never mutate state — replace it.** React compares the old and new value; if it's the same object, it assumes nothing changed:
+```tsx
+messages.push(newMessage);            // ❌ same array → React sees no change → no re-render
+setMessages([...messages, newMessage]); // ✅ new array → re-renders
+
+user.name = "Ravi";                   // ❌
+setUser({ ...user, name: "Ravi" });   // ✅
+```
+This is why Phase 02 warned about `push` and `sort`. In React, **make a new thing** instead.
+
+Real examples from our chat screen (`components/chat.tsx`):
+```tsx
+const [input, setInput] = useState("");            // what's typed in the box
+const [model, setModel] = useState(initialModel);  // which AI model is picked
+```
+
+#### Events: reacting to the user
+
+Event handlers are props starting with `on…`. You pass a **function** (not a call):
+```tsx
+<button onClick={handleClick}>      {/* ✅ passing the function */}
+<button onClick={handleClick()}>    {/* ❌ calls it immediately on render! */}
+<button onClick={() => remove(id)}> {/* ✅ arrow wrapper when you need arguments */}
+```
+
+| Event | Fires when | Where in our app |
 |---|---|---|
-| `useState` | values that change | the input box text, the selected model |
-| `useEffect` | run code *after* render (side effects) | scroll to the newest message |
+| `onClick` | an element is clicked | send button, delete chat, log out |
+| `onChange` | an input's value changes | typing in the message box |
+| `onSubmit` | a form is submitted | the chat form, login form |
+| `onKeyDown` | a key goes down | Enter to send, Shift+Enter for a newline |
+| `onValueChange` | a shadcn/Radix component changes | the model dropdown |
+
+**Controlled inputs** are the standard React pattern: state holds the value, and the input reports changes back.
+
+```tsx
+const [input, setInput] = useState("");
+
+<Textarea
+  value={input}                                  // state → input
+  onChange={(e) => setInput(e.target.value)}     // input → state
+/>
+```
+```
+   state ──── value ────▶ <input>
+     ▲                        │
+     └──── onChange ──────────┘     one source of truth
+```
+Forget `onChange` and the box appears frozen — you type and nothing shows, because `value` is pinned to unchanging state.
+
+Our real handlers from `components/chat.tsx`:
+```tsx
+function handleSubmit(e?: React.FormEvent) {
+  e?.preventDefault();                  // stop the browser reloading the page
+  if (!input.trim() || isLoading) return;
+  sendMessage({ text: input }, { body: { model } });
+  setInput("");                         // clear the box
+}
+
+// Enter sends, Shift+Enter makes a new line
+function handleKeyDown(e: React.KeyboardEvent<HTMLTextAreaElement>) {
+  if (e.key === "Enter" && !e.shiftKey) {
+    e.preventDefault();
+    handleSubmit();
+  }
+}
+```
+> `e.preventDefault()` stops the browser's default behaviour — a form reloading the page, or Enter inserting a newline.
+
+#### `useEffect`: running code after render
+
+`useEffect` is for **side effects**: things outside React's render, like scrolling, timers, subscriptions or manual DOM work.
+
+```tsx
+useEffect(() => {
+  // runs AFTER the render is painted
+}, [dependencies]);
+```
+
+The **dependency array** controls when it runs — this is the whole hook:
+
+```tsx
+useEffect(() => { ... });              // after EVERY render (rarely what you want)
+useEffect(() => { ... }, []);          // once, after the first render only
+useEffect(() => { ... }, [messages]);  // whenever `messages` changes
+```
+
+Ours scrolls to the newest message whenever the list changes (`components/chat.tsx`):
+```tsx
+const bottomRef = useRef<HTMLDivElement>(null);
+
+useEffect(() => {
+  bottomRef.current?.scrollIntoView({ behavior: "smooth" });
+}, [messages]);              // re-run every time a message arrives
+```
+
+**Cleanup:** return a function to undo the effect. React runs it before the next effect and when the component disappears:
+```tsx
+useEffect(() => {
+  const timer = setInterval(tick, 1000);
+  return () => clearInterval(timer);    // ← without this, the timer leaks
+}, []);
+```
+
+> ⚠️ **Don't reach for `useEffect` by habit.** You do **not** need it to fetch data in Next.js (Server Components do that), or to compute a value from state (just compute it while rendering). Ours uses it for one thing: scrolling, which is genuinely outside React.
+
+#### `useRef`: a box that doesn't re-render
+
+Two uses. Point at a DOM element:
+```tsx
+const bottomRef = useRef<HTMLDivElement>(null);
+<div ref={bottomRef} />                       // now bottomRef.current is that div
+bottomRef.current?.scrollIntoView();
+```
+Or hold a value that changes **without** triggering a re-render (unlike state).
+
+| | `useState` | `useRef` |
+|---|---|---|
+| Changing it re-renders | ✅ yes | ❌ no |
+| Read as | `count` | `ref.current` |
+| Use for | anything shown on screen | DOM elements, timer IDs, previous values |
+
+#### The hooks in our app
+
+| Hook | Used for | Where |
+|---|---|---|
+| `useState` | values that change | input text, chosen model, sidebar open/closed |
+| `useEffect` | run code after render | scroll to the newest message |
 | `useRef` | point at a DOM element | the "bottom of chat" div |
-| `useActionState` | form submit state + result | login/register errors |
+| `useActionState` | form submit state + result | login/register errors and pending state |
+| `useRouter` / `usePathname` | navigate, read the URL | delete a chat, highlight the active one |
 | `useChat` (AI SDK) | the whole chat: messages, send, status | the chat screen |
+
+**The rules of hooks**, which the linter enforces:
+1. Only call hooks at the **top level** of a component — never inside `if`, loops or nested functions.
+2. Only call them from **components** or other hooks.
+
+React tracks hooks by call order, so a conditional hook shifts every later one:
+```tsx
+if (isLoggedIn) {
+  const [name, setName] = useState("");   // ❌ breaks the order
+}
+const [name, setName] = useState("");     // ✅ always runs
+if (isLoggedIn) { /* use it here */ }
+```
+
+<details>
+<summary><b>▸ Go deeper: why does my effect run twice in development?</b></summary>
+
+In development, Next.js runs React in **Strict Mode**, which deliberately mounts every component twice to surface missing cleanup. It does **not** happen in production.
+
+If running twice breaks something, that's a real bug the check just found — usually a missing cleanup function. Don't disable Strict Mode; add the cleanup.
+</details>
 
 ## 💡 2. Vite: the fast dev server & bundler
 
