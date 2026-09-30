@@ -69,9 +69,9 @@ bun dev
 | Branch | The app at that point |
 |---|---|
 | `master` | The lessons only, no app code |
-| `phase-02-javascript` | `playground/` with runnable JS + TS exercises |
+| `phase-02-javascript` | `playground/` with runnable JS + TS exercises, incl. map/filter/reduce |
 | `phase-03-tooling` | Adds modules and env-var examples |
-| `phase-04-nextjs` | Next.js + Tailwind + shadcn/ui, a counter page |
+| `phase-04-nextjs` | Next.js + Tailwind + shadcn/ui, plus an interactive `/hooks-demo` page |
 | `phase-05-database` | Adds Docker Postgres, Prisma schema, migration |
 | `phase-06-auth` | Adds login, register, logout (working auth) |
 | `phase-07-ai-chat` | Adds the streaming AI chat |
