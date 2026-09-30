@@ -1,3 +1,4 @@
+import ReactMarkdown from "react-markdown";
 import type { UIMessage } from "ai";
 
 // One chat bubble. User messages sit on the right, AI answers take the full width.
@@ -16,5 +17,9 @@ export function Message({ message }: { message: UIMessage }) {
     );
   }
 
-  return <div className="whitespace-pre-wrap">{text}</div>;
+  return (
+    <div className="prose prose-neutral max-w-none dark:prose-invert">
+      <ReactMarkdown>{text}</ReactMarkdown>
+    </div>
+  );
 }
