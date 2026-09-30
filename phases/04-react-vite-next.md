@@ -3,6 +3,15 @@
 ## 🎯 Goal
 Understand **why** we use React and Next.js, what Vite is, and what CSR / SSR / SSG mean. Then **create our project**.
 
+**You'll understand:**
+- Why we describe UI as a function of state instead of poking the DOM
+- Where a page's HTML gets built, and what that costs
+- When a component must say `"use client"` — the #1 beginner error in Next.js
+- How folders in `app/` become URLs
+
+> 🌿 **Branch:** `git switch phase-04-nextjs` for the finished result of this phase.
+> 📖 Sections marked **▸ Go deeper** are optional. Skip them in the live session.
+
 ---
 
 ## 💡 1. Why React?
@@ -14,6 +23,25 @@ With plain JS, you change the page by hand: `document.getElementById(...).innerT
 ```
 UI = f(state)        your component is a function: data in → UI out
 ```
+
+Compare. Adding one chat message **by hand**, worrying about *how* to change the page:
+
+```js
+const div = document.createElement("div");
+div.className = "message";
+div.textContent = text;
+document.getElementById("messages").appendChild(div);
+// ...and now also hide the empty state, scroll to the bottom, disable the button
+```
+
+The same thing in **React**, describing *what* it should look like:
+
+```tsx
+{messages.map((message) => <Message key={message.id} message={message} />)}
+```
+Add to the `messages` array, and the screen matches. React works out the minimum set of DOM changes needed (it compares the new output with the previous one, the "virtual DOM" diff). You never write `appendChild` again.
+
+> `key` tells React which item is which when a list changes, so it can move elements instead of rebuilding them. Always give lists a stable, unique `key` — never the array index if the list can reorder.
 
 ### Components
 A component is a function that returns **JSX** (HTML-like syntax inside JS):
@@ -115,6 +143,49 @@ In Next.js, components are **Server Components by default**:
 | Ex: `sidebar.tsx` (loads chats from DB) | Ex: `chat.tsx` (typing, sending, streaming) |
 
 **Server Actions** (`"use server"`) are functions that run on the server, but you can call them from a form or a button in the browser. Next.js creates the API request for you. We use them for login and for deleting chats.
+
+### When do I need `"use client"`?
+
+This is the error you'll hit most often. The rule:
+
+> Add `"use client"` **only** when the file uses state, effects, refs, browser events or browser APIs. Otherwise leave it off.
+
+| You use… | Needs `"use client"` |
+|---|---|
+| `useState`, `useEffect`, `useRef`, `useChat` | ✅ yes |
+| `onClick`, `onChange`, `onSubmit` handlers | ✅ yes |
+| `window`, `document`, `localStorage`, `document.cookie` | ✅ yes |
+| `await prisma…`, `await auth()`, secrets | ❌ no — must stay a Server Component |
+| Just showing props / JSX | ❌ no |
+
+The error looks like this, and it means "you used a hook in a Server Component":
+```
+You're importing a component that needs `useState`. This React hook only works
+in a Client Component. To fix, mark the file with the "use client" directive.
+```
+
+**Important:** `"use client"` marks a **boundary**, not a whole subtree of files. Everything *imported by* a client component also ships to the browser. So push `"use client"` as far **down** the tree as you can, keeping data-loading parents on the server.
+
+In our app that split is deliberate:
+```
+app/chat/[id]/page.tsx     server  → loads messages from the database
+  └── components/chat.tsx  client  → typing, streaming, state
+        └── message.tsx    server-safe → just renders text
+```
+
+<details>
+<summary><b>▸ Go deeper: passing a Server Component into a Client Component</b></summary>
+
+A client component can't *import* a server component, but it can receive one as `children`. We use this for the mobile sidebar in Phase 08:
+
+```tsx
+// app/chat/layout.tsx — a Server Component
+<MobileSidebar>      {/* client: handles open/close state */}
+  <Sidebar />        {/* server: queries the database */}
+</MobileSidebar>
+```
+The `Sidebar` is rendered **on the server**, and only its finished output is handed to the client component. That's how we get a database-backed sidebar inside an interactive slide-out panel, without shipping Prisma to the browser.
+</details>
 
 ## 💡 6. App Router: folders are URLs
 

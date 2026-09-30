@@ -3,6 +3,16 @@
 ## 🎯 Goal
 Understand how apps talk to AI models, then build the heart of our app: **send a message → stream the answer → save it**.
 
+**You'll understand:**
+- What an LLM actually does, and why it has no memory
+- Why the whole conversation is sent every single time
+- How streaming works, and why it changes how the app feels
+- Where the API key must live, and why
+
+> 🌿 **Branch:** `git switch phase-07-ai-chat` for the finished result of this phase.
+> 🔍 **See what this phase adds:** `git diff phase-06-auth..phase-07-ai-chat --stat`
+> 📖 Sections marked **▸ Go deeper** are optional. Skip them in the live session.
+
 ---
 
 ## 💡 1. What is an LLM?
@@ -12,6 +22,8 @@ A **Large Language Model** (GPT, Claude, Gemini, Llama, Qwen, Gemma…) is a pro
 - **Tokens**: models read and write in chunks of about ¾ of a word. `"Hello world!"` ≈ 3 tokens. Pricing and limits are counted in tokens.
 - **Context window**: how many tokens the model can "see" at once (the whole conversation must fit).
 - **The model has no memory.** Every time, we send **the whole conversation**. That's why our database stores all messages.
+
+> 💡 **This surprises everyone.** ChatGPT "remembering" your conversation is an illusion created by resending the entire history on every message. Message #20 in a chat costs far more than message #1, because it carries all 19 before it. Real apps eventually trim old messages or summarise them. Ours doesn't — that's a good exercise.
 - **Roles**: `system` (instructions: "You are a helpful assistant"), `user` (you) and `assistant` (the AI).
 
 ```json
@@ -45,6 +57,25 @@ normal:     request ─────────── wait 10s ─────�
 streaming:  request ─▶ "A" ─▶ " closure" ─▶ " is" ─▶ " a" ─▶ ... ─▶ [done]
 ```
 Under the hood, it's one HTTP response that stays open and sends chunks (Server-Sent Events).
+
+Streaming is also why saving the answer is slightly tricky. The server doesn't have the full text when it starts responding, so it can't save it yet. That's the job of `onEnd`, which fires once the stream finishes:
+
+```ts
+onEnd: async ({ responseMessage }) => {
+  const text = getText(responseMessage);
+  if (text) {
+    await prisma.message.create({ data: { chatId: id, role: "assistant", content: text } });
+  }
+},
+```
+
+<details>
+<summary><b>▸ Go deeper: what happens if the user closes the tab mid-stream?</b></summary>
+
+The connection drops, generation stops, and `onEnd` may never run — so that answer is **never saved**. Reload the page and the half-finished reply is gone, while your question remains (it was saved *before* the model was called).
+
+Try it: send a message, then hit reload while it's typing. This is a real trade-off in our simple design, and production apps handle it by saving partial chunks as they arrive, or by generating server-side independently of the connection.
+</details>
 
 ## 💡 4. The Vercel AI SDK
 

@@ -3,6 +3,9 @@
 ## 🎯 Goal
 Finish the app: a sidebar listing your chats (with delete), a user menu with logout, a mobile menu, and Markdown answers.
 
+> 🌿 **Branch:** `git switch phase-08-sidebar` for the finished result of this phase.
+> 🔍 **See what this phase adds:** `git diff phase-07-ai-chat..phase-08-sidebar --stat`
+
 ## 💡 Quick concepts
 - **Nested layouts**: `app/chat/layout.tsx` wraps every `/chat/*` page, so the sidebar stays on screen while only the page part changes.
 - **Server Components fetch data directly**: the sidebar is an `async` component that queries Prisma. There's no API route and no `useEffect`.

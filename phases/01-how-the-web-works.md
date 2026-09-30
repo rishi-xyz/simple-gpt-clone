@@ -3,6 +3,14 @@
 ## 🎯 Goal
 Understand what happens when you open a website, and what "frontend", "backend", "server", "database" and "API" really mean.
 
+**You'll understand:**
+- Why the browser only speaks HTML, CSS and JavaScript, and what everything else compiles down to
+- Where *your* code runs: browser or server, and why that decides what's secret
+- How one request becomes one response, and what the numbers (`200`, `404`) mean
+- What an API is, and which ones our app calls
+
+> 📖 Sections marked **▸ Go deeper** are optional. Skip them in the live session.
+
 ---
 
 ## 💡 1. The browser understands only three languages
@@ -44,7 +52,32 @@ React, Next.js, TypeScript and Tailwind are all things **we** use to write code 
 - React (JSX) → turned into JavaScript that creates HTML
 - Tailwind classes → turned into a CSS file
 
+This matters for debugging: when something breaks in the browser, the browser is complaining about the **compiled** output, not the nice code you wrote. That's why build tools also ship *source maps*, which map the compiled code back to your original lines.
+
 The browser parses the HTML into a tree called the **DOM** (Document Object Model). JavaScript can change the DOM, and that's how pages update without reloading.
+
+```
+<html>                      html
+  <body>          →         └── body
+    <h1>Hello!</h1>             ├── h1 · "Hello!"
+    <button>Go</button>         └── button · "Go"
+  </body>
+</html>
+```
+
+<details>
+<summary><b>▸ Go deeper: what the browser actually does with your HTML</b></summary>
+
+1. **Parse** the HTML into the DOM tree (above).
+2. **Parse** the CSS into rules, and work out which rule wins for each element (the *cascade*).
+3. **Layout**: calculate where every box goes and how big it is.
+4. **Paint**: fill in pixels, colours, text and shadows.
+5. **Composite**: stack the layers and show the result.
+
+When JavaScript changes the DOM, the browser redoes steps 3–5 for the affected parts. That's why changing a thousand elements one by one is slow, and it's part of why React exists: React batches changes and applies the minimum needed.
+
+**Render-blocking:** a `<script>` in the `<head>` pauses HTML parsing until it downloads and runs. That's why scripts traditionally go at the end of `<body>`, or use `defer`.
+</details>
 
 ---
 
@@ -71,6 +104,14 @@ The browser parses the HTML into a tree called the **DOM** (Document Object Mode
 - **Database**: where data is stored *permanently* (users, chats, messages). If the server restarts, the data is still there.
 
 > **Rule of thumb:** Never trust the frontend. Anyone can open DevTools and change the JS in their browser. Anything important (who is logged in, which chats they may see) must be checked on the **backend**.
+
+**Why this rule matters in our app.** In Phase 07 we hide the model dropdown behind a fixed list. But a user could still send *any* model name with a hand-made request. So the server checks it again:
+
+```ts
+// app/api/chat/route.ts — the frontend already limits this, and the server re-checks anyway
+const modelId = MODELS.some((m) => m.id === model) ? model : DEFAULT_MODEL;
+```
+The same idea protects your chats: the server asks "is this chat yours?" on every single message, and never trusts the id the browser sent.
 
 ---
 
@@ -111,6 +152,30 @@ Content-Type: application/json            {"reply": "Hi! How can I help?"}
 | `500` Server Error | The server crashed |
 
 **Headers** are extra information (key: value) sent with requests and responses, such as `Content-Type` and `Cookie`.
+
+You'll meet every one of these in our app:
+
+| Where | What it looks like |
+|---|---|
+| `GET /chat/abc123` → `200` | Opening a chat page |
+| `POST /api/chat` → `200` + a stream | Sending a message |
+| `POST /api/chat` → `401` | You're not logged in |
+| `POST /api/chat` → `404` | That chat isn't yours (we don't say "forbidden": it shouldn't even exist for you) |
+| `GET /` → `307` | Redirect to `/chat/<new-id>` |
+
+<details>
+<summary><b>▸ Go deeper: why 404 instead of 403 for someone else's chat?</b></summary>
+
+`403 Forbidden` tells the attacker "this exists, you just can't have it". `404 Not Found` tells them nothing. Hiding whether a resource exists is a small but real privacy win, and it's what `app/api/chat/route.ts` does:
+
+```ts
+const chat = await prisma.chat.findUnique({ where: { id } });
+if (!chat || chat.userId !== userId) {
+  return new Response("Chat not found", { status: 404 });
+}
+```
+Note that **both** cases return the same thing: the chat doesn't exist, and the chat isn't yours.
+</details>
 
 ---
 

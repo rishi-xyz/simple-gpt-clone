@@ -3,6 +3,8 @@
 ## 🎯 Goal
 Put the app on the internet with a real URL.
 
+> 🌿 **Branch:** `git switch phase-09-deploy` adds a `DEPLOY.md` checklist you can keep.
+
 ## 💡 Concepts
 - **Hosting / deployment**: running your app on a server that's always on and reachable by anyone.
 - **Vercel**: the company behind Next.js. You connect your GitHub repo, and **every `git push` deploys automatically**. Every PR also gets its own *preview* URL.

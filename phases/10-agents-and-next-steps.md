@@ -3,6 +3,9 @@
 ## 🎯 Goal
 Understand what an **AI agent** is, add a **tool** to your chatbot, and pick your next challenge.
 
+> 🌿 **Branch:** `git switch phase-10-agents` has the tool-calling code already working.
+> 🔍 **See exactly what a tool adds:** `git diff phase-08-sidebar..phase-10-agents`
+
 ---
 
 ## 💡 1. Chatbot vs agent

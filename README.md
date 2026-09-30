@@ -47,6 +47,67 @@ Stuck on a word? Look it up in the [**Glossary**](GLOSSARY.md).
 
 > **Short on time?** Phases 01–03 can be a quick 15-minute talk; students read them in detail later. The code starts in Phase 04.
 
+### Reading the lessons at two speeds
+
+The lessons are written so the **same file works for a live 2-hour session and for slow self-study**:
+
+- The **main text** is what we cover live. Read only this and you'll finish in 2 hours.
+- Sections marked **<details> ▸ Go deeper** are collapsed extras: how something works under the hood, edge cases, and "what if". **Skip them in the session** and open them later at home.
+
+## 📦 The demo branches
+
+Every phase has a **git branch with the working code at that point**. Use them to jump to any stage, to check your own work, or to see exactly what one phase adds.
+
+```bash
+git branch --list                 # see all phases
+git switch phase-06-auth          # jump to the app as it looks after Phase 06
+bun install                       # each phase has its own package.json
+cp .env.example .env              # fill in your keys (from Phase 05 onward)
+bun dev
+```
+
+| Branch | The app at that point |
+|---|---|
+| `master` | The lessons only, no app code |
+| `phase-02-javascript` | `playground/` with runnable JS + TS exercises |
+| `phase-03-tooling` | Adds modules and env-var examples |
+| `phase-04-nextjs` | Next.js + Tailwind + shadcn/ui, a counter page |
+| `phase-05-database` | Adds Docker Postgres, Prisma schema, migration |
+| `phase-06-auth` | Adds login, register, logout (working auth) |
+| `phase-07-ai-chat` | Adds the streaming AI chat |
+| `phase-08-sidebar` | Adds the sidebar, user menu and Markdown |
+| `phase-09-deploy` | Adds the deployment checklist |
+| `phase-10-agents` | Adds tool calling (`getTime`) to the chat |
+
+Each branch **builds on the one before it**, so the diff between two branches is exactly what that phase teaches:
+
+```bash
+git diff phase-06-auth..phase-07-ai-chat --stat    # what Phase 07 adds
+git diff phase-06-auth..phase-07-ai-chat           # the actual code
+```
+
+> 💡 **Teaching tip:** run `git diff <prev>..<this> --stat` at the start of each phase. Students see the list of files they're about to write before they write them.
+
+Every branch also carries the lessons, so `phases/` is still there after you switch.
+
+> ⚠️ The branches were verified with `bun install && bun run build`. They do **not** include `.env` (it holds secrets), so copy `.env.example` and add your own keys.
+
+## 🧑‍🏫 Running this as a live 2-hour session
+
+The lessons are longer than 2 hours if you read every word. They're written that way on purpose: detailed enough to study alone afterwards, structured so you can move fast live.
+
+To stay on time:
+
+1. **Skip every `▸ Go deeper` block.** They're collapsed and marked; students read them at home.
+2. **Phases 01–03 are one 15-minute talk, not three lessons.** Show the diagrams, skip the exercises. Tell students these phases are the reference they'll come back to.
+3. **Don't type the boilerplate live.** For long files (`auth.ts`, `route.ts`, `chat.tsx`), let students copy from the lesson while you explain what each part does. Typing 60 lines of JSX in front of an audience kills momentum.
+4. **Use the branches when you fall behind.** If Phase 06 runs long, `git switch phase-06-auth` puts everyone at the right state in seconds, and you keep going.
+5. **Checkpoints are the real deadline.** If the checkpoint passes, move on, even if you skipped detail.
+
+Rough live split: setup and concepts **20 min** (00–03) · project + database **25 min** (04–05) · auth **25 min** (06) · chat **35 min** (07) · sidebar and deploy **15 min** (08–09). Phase 10 is homework.
+
+> Demo on the same machine you tested on, with `bun install` already run and Docker already up. Installing dependencies in front of a room is how you lose fifteen minutes.
+
 ## Before you start
 
 - A laptop with **Linux / macOS / Windows (WSL recommended)**

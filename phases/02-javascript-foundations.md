@@ -3,7 +3,23 @@
 ## 🎯 Goal
 Learn the JavaScript you'll *actually see* in our project, and why we write it as TypeScript.
 
-> Run any snippet here with `bun repl`, `node`, or the browser console (`F12` → Console). You can also save it as `test.js` and run `bun test.js`.
+**You'll understand:**
+- The syntax that shows up on almost every line of this project
+- How to transform lists with `map` / `filter` / `reduce` instead of manual loops
+- Why slow work needs `async` / `await`, and what a Promise really is
+- What TypeScript adds, and how to read a type error
+
+> 💻 **Run every snippet.** Switch to the branch with the runnable versions:
+> ```bash
+> git switch phase-02-javascript
+> bun playground/01-basics.js
+> bun playground/02-loops.js
+> bun playground/03-async.js
+> bun playground/04-types.ts
+> ```
+> Or paste snippets into `bun repl`, `node`, or the browser console (`F12` → Console).
+
+> 📖 Sections marked **▸ Go deeper** are optional. Skip them in the live session.
 
 ---
 
@@ -172,6 +188,53 @@ const chat = await prisma.chat.findUnique({ where: { id } });
 
 **Running things in parallel:** `await Promise.all([taskA(), taskB()])` waits for both at the same time.
 
+### The three mistakes everyone makes
+
+**1. Forgetting `await`.** You get a `Promise` object instead of the value:
+```js
+const chat = prisma.chat.findUnique({ where: { id } });
+console.log(chat.title);   // undefined — chat is a Promise, not a chat!
+//    fix: const chat = await prisma.chat.findUnique(...)
+```
+
+**2. Using `await` inside `.map()` and expecting it to wait.** `.map` doesn't wait, so you get an array of Promises:
+```js
+const results = ids.map(async (id) => await getChat(id));   // [Promise, Promise, ...]
+const results = await Promise.all(ids.map((id) => getChat(id)));   // ✅ actual values
+```
+
+**3. Awaiting in a loop when things could run at once.** Correct, but slow:
+```js
+for (const id of ids) await getChat(id);        // 3 chats × 100ms = 300ms
+await Promise.all(ids.map((id) => getChat(id))); // all at once ≈ 100ms
+```
+Use the loop when each step **depends** on the previous one, and `Promise.all` when they're independent.
+
+<details>
+<summary><b>▸ Go deeper: the event loop, and why order surprises you</b></summary>
+
+Run `bun playground/03-async.js` and look at the order it prints:
+```
+1. start
+2. this runs BEFORE the callback — JS did not wait
+4. Linus Torvalds has ... repos
+5. failed: GitHub said 404
+3. one second later (callback)
+```
+`3.` comes **last**, even though its `setTimeout` was scheduled first.
+
+JS has **one** call stack. Slow things (timers, network, disk) are handled *outside* it by the runtime. When they finish, their callback is put in a **queue**. The **event loop** takes from that queue only when the call stack is empty.
+
+```
+call stack (one thing at a time)      queue (waiting to run)
+┌──────────────┐                      ┌────────────────────┐
+│ your code    │ ◀── event loop ───── │ timer callback     │
+└──────────────┘   (when stack empty) │ fetch response     │
+                                      └────────────────────┘
+```
+So: **all synchronous code runs first**, then queued callbacks. A slow synchronous loop (`for (let i=0; i<1e10; i++)`) blocks *everything*, including clicks and rendering. That's what "don't block the event loop" means.
+</details>
+
 ---
 
 ## 💡 8. TypeScript: JavaScript with types
@@ -205,6 +268,43 @@ lastText([{ role: "bot", content: "hi" }]);
 - Files end in `.ts`. Files with JSX (React) end in `.tsx`.
 - Browsers don't understand TS, so it's **compiled** to JS. Next.js and Bun do this for you automatically.
 - Libraries like Prisma, Zod and the AI SDK generate types, so your editor can **autocomplete** everything.
+
+### How to read a TypeScript error
+
+Type errors look scary but follow one pattern: **what it got** vs **what it wanted**.
+
+```
+Type 'string | undefined' is not assignable to type 'string'.
+  Type 'undefined' is not assignable to type 'string'.
+     ↑ got                            ↑ wanted
+```
+Translation: *"this might be `undefined`, and the place you're putting it can't handle that."* Fixes, in order of preference:
+
+```ts
+if (!savedModel) return;              // 1. handle the missing case (best)
+const model = savedModel ?? DEFAULT;  // 2. give it a default
+const model = savedModel!;            // 3. "trust me, it's there" — crashes if you're wrong
+```
+Our project uses #2 constantly, because config and cookies are so often missing:
+```ts
+const model = MODELS.some((m) => m.id === savedModel) ? savedModel! : DEFAULT_MODEL;
+```
+
+<details>
+<summary><b>▸ Go deeper: types are erased at runtime</b></summary>
+
+TypeScript types **vanish** when compiled. This runs fine even though the type says otherwise, because at runtime there is no check:
+```ts
+const data = JSON.parse(text) as Message;   // a lie TypeScript happily believes
+```
+`as` is a *claim*, not a check. That's exactly why we use **Zod** in Phase 06: it validates the actual data at runtime, and gives TypeScript a type it can trust.
+```ts
+const parsed = loginSchema.safeParse(credentials);  // real check, at runtime
+if (!parsed.success) return null;
+parsed.data.email;   // now TypeScript AND reality agree it's a valid email
+```
+**Rule:** for data from outside your program (forms, APIs, JSON), validate. `as` is for when you genuinely know more than the compiler.
+</details>
 
 ## ✅ Checkpoint
 You can read this line from our project and explain every part of it:

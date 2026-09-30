@@ -3,6 +3,15 @@
 ## 🎯 Goal
 Understand how apps store data, how SQL and NoSQL differ, and **set up Postgres + Prisma** for our users, chats and messages.
 
+**You'll understand:**
+- Why data needs a database and not just variables
+- How relations (user → chat → message) are modelled and enforced
+- What an ORM saves you from, and what a migration is
+- How to look at and edit your data directly
+
+> 🌿 **Branch:** `git switch phase-05-database` for the finished result of this phase.
+> 📖 Sections marked **▸ Go deeper** are optional. Skip them in the live session.
+
 ---
 
 ## 💡 1. Why a database?
@@ -85,6 +94,36 @@ const chats = await prisma.chat.findMany({
 3. `prisma generate` creates a **typed client** (`lib/generated/prisma`) you use in code.
 
 A **migration** is a versioned, committed SQL file that describes a change to the database schema. Everyone on the team (and production) applies the same changes in the same order.
+
+### The four Prisma commands you'll actually use
+
+| Command | What it does | When |
+|---|---|---|
+| `prisma migrate dev --name x` | Creates **and** applies a migration | You changed `schema.prisma` in development |
+| `prisma migrate deploy` | Applies existing migrations, never creates | Production (Phase 09) |
+| `prisma generate` | Rebuilds the typed client | After changing the schema, or a fresh `install` |
+| `prisma studio` | Opens a GUI for your data | Any time you want to look |
+
+> ⚠️ **`migrate dev` can drop data** if a change is destructive (removing a column, adding a required field to a table with rows). It warns you first. Never run it against production — that's what `migrate deploy` is for.
+
+<details>
+<summary><b>▸ Go deeper: the N+1 query problem</b></summary>
+
+This looks innocent and is a classic performance bug:
+```ts
+const chats = await prisma.chat.findMany({ where: { userId } });      // 1 query
+for (const chat of chats) {
+  chat.messages = await prisma.message.findMany({ where: { chatId: chat.id } });  // N more!
+}
+```
+With 50 chats that's **51** round-trips to the database. Prisma solves it with `include`, which fetches everything needed up front — exactly what our chat page does:
+```ts
+const chat = await prisma.chat.findUnique({
+  where: { id },
+  include: { messages: { orderBy: { createdAt: "asc" } } },   // one query
+});
+```
+</details>
 
 ## 💡 6. Docker in one paragraph
 

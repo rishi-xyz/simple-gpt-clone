@@ -3,6 +3,16 @@
 ## 🎯 Goal
 Understand how websites "remember" who you are, and build **email/password + GitHub + Google login** with Auth.js.
 
+**You'll understand:**
+- Why passwords are never stored, only hashed
+- How a cookie makes a stateless protocol feel logged-in
+- The real trade-off between database sessions and JWTs
+- What actually happens when you click "Continue with GitHub"
+
+> 🌿 **Branch:** `git switch phase-06-auth` for the finished result of this phase.
+> 🔍 **See what this phase adds:** `git diff phase-05-database..phase-06-auth --stat`
+> 📖 Sections marked **▸ Go deeper** are optional. Skip them in the live session.
+
 ---
 
 ## 💡 1. Authentication vs Authorization
@@ -62,6 +72,22 @@ Anyone can *read* the payload (it's only encoded, not encrypted), but only the s
 | Log out everywhere / ban user instantly | ✅ delete the row | ❌ harder (the token is valid until it expires) |
 | Scales across servers | needs a shared DB | ✅ stateless |
 | Our app | — | ✅ **required** for the email/password (Credentials) provider in Auth.js |
+
+> 🔑 **The trade-off in one line:** a JWT is fast because the server doesn't have to look anything up, and that same property is why you can't instantly revoke one.
+
+Note the odd consequence in our app: we have a `Session` table in the schema (the Prisma adapter creates it), but we never use it, because `session: { strategy: "jwt" }` keeps sessions in the cookie. The table is there for the OAuth providers' account linking.
+
+<details>
+<summary><b>▸ Go deeper: how a signature actually prevents forgery</b></summary>
+
+The signature is `HMAC(header + payload, AUTH_SECRET)` — a hash that mixes in a secret only the server knows.
+
+An attacker who wants to change `{"id":"u1"}` to `{"id":"u2"}` can easily edit the payload (it's just base64). But then they must produce a matching signature, and to do that they'd need `AUTH_SECRET`. Without it they'd have to guess, and there are more possible values than atoms in the observable universe.
+
+The server verifies by recomputing the signature and comparing. Mismatch → rejected.
+
+**This is why `AUTH_SECRET` leaking is catastrophic:** anyone with it can mint a valid token for *any* user. It belongs in `.env` (git-ignored) and in Vercel's environment variables, never in code.
+</details>
 
 ## 💡 5. OAuth: "Continue with GitHub/Google"
 

@@ -3,6 +3,15 @@
 ## 🎯 Goal
 Know what each tool in a modern JS project does, so commands like `bun add` or `git push` make sense.
 
+**You'll understand:**
+- Why JavaScript can run on a server at all
+- What `package.json`, the lockfile and `node_modules` each do
+- Where secrets live, and how to keep them off GitHub
+- Enough Git to save your work and undo mistakes
+
+> 🌿 **Branch:** `git switch phase-03-tooling` for runnable module and env-var examples.
+> 📖 Sections marked **▸ Go deeper** are optional. Skip them in the live session.
+
 ---
 
 ## 💡 1. Running JavaScript outside the browser: Node.js and Bun
@@ -97,6 +106,23 @@ git merge feature/sidebar        # bring the branch's commits into main
 ```
 
 **`.gitignore`** lists files Git should ignore: `node_modules/`, `.env`, `.next/`.
+
+<details>
+<summary><b>▸ Go deeper: undoing things in Git</b></summary>
+
+| Situation | Command |
+|---|---|
+| Changed a file, want the last committed version back | `git restore <file>` |
+| Staged with `git add`, want to unstage | `git restore --staged <file>` |
+| Last commit message was wrong | `git commit --amend -m "better message"` |
+| Want to undo the last commit but **keep** the changes | `git reset --soft HEAD~1` |
+| Want to undo the last commit and **throw away** the changes | `git reset --hard HEAD~1` ⚠️ |
+| Already pushed, need a safe undo | `git revert <commit>` (makes a new, opposite commit) |
+
+`git reset --hard` deletes work permanently. Before any scary command, `git status` and `git log --oneline` tell you where you are.
+
+**`.gitignore` only ignores files Git isn't already tracking.** If you committed `.env` once, adding it to `.gitignore` changes nothing — you must `git rm --cached .env` **and** treat those secrets as leaked (rotate the keys).
+</details>
 
 ## 💡 5. GitHub: Git in the cloud
 
