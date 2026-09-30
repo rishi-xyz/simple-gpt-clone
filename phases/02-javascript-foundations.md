@@ -94,27 +94,122 @@ for (let i = 0; i < 3; i++) console.log(i);   // 0 1 2
 for (const m of messages) console.log(m.content);
 ```
 
-### Array methods: loops you'll use every day
+### Array methods: loops you'll use every day ⭐
+
+These replace almost every `for` loop you'd otherwise write. Each one takes a **function** and runs it on every item.
 
 ```js
 const nums = [1, 2, 3, 4];
 
-nums.map((n) => n * 2);             // [2, 4, 6, 8]    transform each item
-nums.filter((n) => n > 2);          // [3, 4]          keep some items
-nums.some((n) => n > 3);            // true            is at least one true?
-nums.find((n) => n > 1);            // 2               first match
-nums.reduce((sum, n) => sum + n, 0);// 10              combine into one value
-nums.join(", ");                    // "1, 2, 3, 4"
+nums.map((n) => n * 2);              // [2, 4, 6, 8]   transform each item
+nums.filter((n) => n > 2);           // [3, 4]         keep only matching items
+nums.find((n) => n > 1);             // 2              first match (or undefined)
+nums.some((n) => n > 3);             // true           is at least one true?
+nums.every((n) => n > 0);            // true           are all true?
+nums.includes(3);                    // true           is this value in there?
+nums.reduce((sum, n) => sum + n, 0); // 10             combine into one value
+nums.join(", ");                     // "1, 2, 3, 4"   array → string
+nums.slice(1, 3);                    // [2, 3]         a copy of part of it
+nums.sort((a, b) => b - a);          // [4, 3, 2, 1]   ⚠️ changes the original!
+nums.forEach((n) => console.log(n)); // undefined      just do something, return nothing
 ```
 
-From our project (`app/api/chat/route.ts`), this gets the text out of a message:
+**The big three, visually:**
+
+```
+        [1,  2,  3,  4]
+map      ↓   ↓   ↓   ↓        every item transformed, SAME length out
+        [2,  4,  6,  8]
+
+        [1,  2,  3,  4]
+filter   ✗   ✗   ✓   ✓        only items that pass, SHORTER (or equal)
+            [3,  4]
+
+        [1,  2,  3,  4]
+reduce   └───┴───┴───┘        everything squashed together, ONE value out
+              10
+```
+
+**`map` vs `forEach`** trips people up constantly:
+```js
+const doubled = nums.map((n) => n * 2);      // ✅ [2,4,6,8] — returns a new array
+const nothing = nums.forEach((n) => n * 2);  // ❌ undefined — forEach returns nothing
+```
+Use `map` when you want a **new array back**. Use `forEach` when you only want a side effect (logging, saving).
+
+**Chaining** is where they get powerful — each one hands its result to the next:
+```js
+const chats = [
+  { title: "Pasta recipe", messages: 4, pinned: true },
+  { title: "Learn TypeScript", messages: 0, pinned: false },
+  { title: "Debug my code", messages: 12, pinned: false },
+];
+
+const busyTitles = chats
+  .filter((c) => c.messages > 0)          // drop empty chats
+  .map((c) => c.title)                    // keep just the titles
+  .join(" · ");                           // "Pasta recipe · Debug my code"
+
+const totalMessages = chats.reduce((sum, c) => sum + c.messages, 0);  // 16
+```
+
+**`reduce` explained slowly**, because it's the one that looks like magic. It carries an "accumulator" from item to item:
+```js
+[1, 2, 3, 4].reduce((sum, n) => sum + n, 0);
+//                   ↑     ↑             ↑
+//            running total │         starting value
+//                       current item
+
+// step 1: sum=0,  n=1  →  1
+// step 2: sum=1,  n=2  →  3
+// step 3: sum=3,  n=3  →  6
+// step 4: sum=6,  n=4  →  10   ← final result
+```
+
+**⚠️ Which methods change the original array?**
+```js
+const original = [3, 1, 2];
+
+original.map(...)      // safe — returns new
+original.filter(...)   // safe — returns new
+original.slice(...)    // safe — returns new
+
+original.sort()        // MUTATES original!
+original.reverse()     // MUTATES original!
+original.push(4)       // MUTATES original!
+
+const sorted = [...original].sort();   // ✅ copy first, then sort
+```
+This matters enormously in React: **mutating state instead of replacing it means React won't re-render** (more in Phase 04).
+
+### Where these appear in our project
+
+Getting the text out of an AI message (`app/api/chat/route.ts`) — `map` + `join`:
 ```ts
 message.parts.map((part) => (part.type === "text" ? part.text : "")).join("");
 ```
-And in React we turn arrays into UI with `.map`:
+
+Checking the model is one we allow (`app/api/chat/route.ts`) — `some`:
+```ts
+const modelId = MODELS.some((m) => m.id === model) ? model : DEFAULT_MODEL;
+```
+
+Turning database rows into UI messages (`app/chat/[id]/page.tsx`) — `map`:
+```ts
+const initialMessages: UIMessage[] = chat.messages.map((m) => ({
+  id: m.id,
+  role: m.role as "user" | "assistant",
+  parts: [{ type: "text", text: m.content }],
+}));
+```
+
+Rendering a list in React — `map` again, this time producing JSX:
 ```tsx
 {messages.map((message) => <Message key={message.id} message={message} />)}
+{MODELS.map((model) => <SelectItem key={model.id} value={model.id}>{model.label}</SelectItem>)}
 ```
+
+> 💡 **Notice the pattern:** every list on screen in this app is an array with `.map()` called on it. That's the single most common thing you'll write in React.
 
 ## 💡 5. Destructuring and spread
 
